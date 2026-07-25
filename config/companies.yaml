@@ -1,0 +1,72 @@
+# Add your target companies here.
+#
+# type: greenhouse       -> value is the Greenhouse "board token"
+#                            (boards.greenhouse.io/<TOKEN>)
+# type: lever             -> value is the Lever company slug
+#                            (jobs.lever.co/<SLUG>)
+# type: workday           -> value is a mapping: tenant, wd_host, site
+#                            (from <tenant>.<wd_host>.myworkdayjobs.com/<site>)
+# type: smartrecruiters   -> value is the SmartRecruiters company identifier
+#                            (jobs.smartrecruiters.com/<IDENTIFIER>)
+# type: ashby              -> value is the Ashby job board name
+#                            (jobs.ashbyhq.com/<NAME>)
+# type: icims              -> value is the careers/search page URL (best-effort —
+#                            see providers/icims.py, no standard public API exists)
+# type: successfactors    -> value is the careers/search page URL (best-effort —
+#                            see providers/successfactors.py, same caveat as icims)
+# type: generic            -> value is the full careers page URL (works on
+#                            plain server-rendered HTML only — check if the
+#                            company uses one of the ATS platforms above first,
+#                            those are far more reliable)
+#
+# Tip: view-source on a company's careers page, or just look at the job
+# posting URL, and it's usually obvious which ATS they're on.
+
+# Global filters, applied to every company UNLESS that company defines its
+# own "filters:" block (which fully replaces this one for that company).
+filters:
+  remote_only: false
+  locations: []              # e.g. ["Kolkata", "Bangalore", "India"] — any-of match
+  keywords_include: []       # ALL must appear in title/description, e.g. ["Azure"]
+  keywords_exclude: []       # dropped if ANY appear, e.g. ["Senior", "Lead", "Staff"]
+  experience_levels: []      # any-of match, e.g. ["junior", "entry level", "0-2 years"]
+
+companies:
+  - name: "Example Greenhouse Co"
+    type: greenhouse
+    value: "examplecompany"
+
+  - name: "Example Lever Co"
+    type: lever
+    value: "examplecompany"
+
+  - name: "Example Workday Co"
+    type: workday
+    value:
+      tenant: "examplecompany"
+      wd_host: "wd1"     # from <tenant>.<wd_host>.myworkdayjobs.com
+      site: "External"   # the career site name, also in the URL
+
+  - name: "Example SmartRecruiters Co"
+    type: smartrecruiters
+    value: "ExampleCompany"
+
+  - name: "Example Ashby Co"
+    type: ashby
+    value: "examplecompany"
+
+  - name: "Example iCIMS Co"
+    type: icims
+    value: "https://careers-example.icims.com/jobs/search"
+
+  - name: "Example SuccessFactors Co"
+    type: successfactors
+    value: "https://career.example.com/jobs"
+
+  - name: "Example Generic Co"
+    type: generic
+    value: "https://example.com/careers"
+    # Per-company filter override example:
+    filters:
+      remote_only: true
+      keywords_include: ["Azure"]
