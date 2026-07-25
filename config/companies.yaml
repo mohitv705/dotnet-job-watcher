@@ -1,6 +1,6 @@
 # Add your target companies here.
 #
-# type: greenhouse       -> value is the Greenhouse "board token"
+# type: greenhouse        -> value is the Greenhouse "board token"
 #                            (boards.greenhouse.io/<TOKEN>)
 # type: lever             -> value is the Lever company slug
 #                            (jobs.lever.co/<SLUG>)
@@ -8,65 +8,105 @@
 #                            (from <tenant>.<wd_host>.myworkdayjobs.com/<site>)
 # type: smartrecruiters   -> value is the SmartRecruiters company identifier
 #                            (jobs.smartrecruiters.com/<IDENTIFIER>)
-# type: ashby              -> value is the Ashby job board name
+# type: ashby             -> value is the Ashby job board name
 #                            (jobs.ashbyhq.com/<NAME>)
-# type: icims              -> value is the careers/search page URL (best-effort —
+# type: icims             -> value is the careers/search page URL (best-effort —
 #                            see providers/icims.py, no standard public API exists)
 # type: successfactors    -> value is the careers/search page URL (best-effort —
 #                            see providers/successfactors.py, same caveat as icims)
-# type: generic            -> value is the full careers page URL (works on
+# type: generic           -> value is the full careers page URL (works on
 #                            plain server-rendered HTML only — check if the
 #                            company uses one of the ATS platforms above first,
 #                            those are far more reliable)
-#
-# Tip: view-source on a company's careers page, or just look at the job
-# posting URL, and it's usually obvious which ATS they're on.
 
 # Global filters, applied to every company UNLESS that company defines its
 # own "filters:" block (which fully replaces this one for that company).
 filters:
   remote_only: false
-  locations: []              # e.g. ["Kolkata", "Bangalore", "India"] — any-of match
-  keywords_include: []       # ALL must appear in title/description, e.g. ["Azure"]
-  keywords_exclude: []       # dropped if ANY appear, e.g. ["Senior", "Lead", "Staff"]
-  experience_levels: []      # any-of match, e.g. ["junior", "entry level", "0-2 years"]
+  locations: ["Kolkata", "Bangalore", "Bengaluru", "Hyderabad", "Pune", "Gurugram", "Remote", "India"]
+  keywords_include: []       # ALL must appear in title/description (e.g. [".NET", "C#"])
+  keywords_exclude: ["Senior", "Lead", "Staff", "Principal", "Manager", "Intern"]
+  experience_levels: []      # any-of match, e.g. ["0-2 years", "mid level"]
 
 companies:
-  - name: "Example Greenhouse Co"
+  # ---- High-Yield ATS Targets (Greenhouse, Lever, Workday, Ashby) ---------
+
+  - name: "PhonePe"
     type: greenhouse
-    value: "examplecompany"
+    value: "phonepe"
 
-  - name: "Example Lever Co"
+  - name: "Payoneer"
+    type: greenhouse
+    value: "payoneer"
+
+  - name: "Groww"
+    type: greenhouse
+    value: "groww"
+
+  - name: "Cred"
+    type: greenhouse
+    value: "cred"
+
+  - name: "Atlassian"
+    type: greenhouse
+    value: "atlassian"
+
+  - name: "Razorpay"
     type: lever
-    value: "examplecompany"
+    value: "razorpay"
 
-  - name: "Example Workday Co"
+  - name: "Swiggy"
+    type: lever
+    value: "swiggy"
+
+  - name: "Postman"
+    type: lever
+    value: "postman"
+
+  - name: "Zepto"
+    type: ashby
+    value: "zepto"
+
+  - name: "Accenture"
     type: workday
     value:
-      tenant: "examplecompany"
-      wd_host: "wd1"     # from <tenant>.<wd_host>.myworkdayjobs.com
-      site: "External"   # the career site name, also in the URL
+      tenant: "accenture"
+      wd_host: "wd103"
+      site: "AccentureCareers"
 
-  - name: "Example SmartRecruiters Co"
-    type: smartrecruiters
-    value: "ExampleCompany"
+  # ---- Service-based companies: NOT on standard API providers -------------
+  # TCS, Wipro, Infosys, Cognizant, Capgemini, HCLTech, and Tech Mahindra do
+  # NOT run on Greenhouse/Lever/Workday/SmartRecruiters/Ashby. They use
+  # heavy custom/JS-rendered portals (TCS iBegin, BrassRing, Phenom), none
+  # of which plain HTML scrapers cover well.
+  #
+  # Listed below for direct reference, but require dedicated browser automation
+  # (e.g. Playwright) for reliable scraping.
 
-  - name: "Example Ashby Co"
-    type: ashby
-    value: "examplecompany"
-
-  - name: "Example iCIMS Co"
-    type: icims
-    value: "https://careers-example.icims.com/jobs/search"
-
-  - name: "Example SuccessFactors Co"
-    type: successfactors
-    value: "https://career.example.com/jobs"
-
-  - name: "Example Generic Co"
+  - name: "TCS"
     type: generic
-    value: "https://example.com/careers"
-    # Per-company filter override example:
-    filters:
-      remote_only: true
-      keywords_include: ["Azure"]
+    value: "https://ibegin.tcs.com/iBegin/jobs/search"
+
+  - name: "Wipro"
+    type: generic
+    value: "https://careers.wipro.com/"
+
+  - name: "Infosys"
+    type: generic
+    value: "https://career.infosys.com/"
+
+  - name: "Cognizant"
+    type: generic
+    value: "https://careers.cognizant.com/global-en/jobs/"
+
+  - name: "Capgemini"
+    type: generic
+    value: "https://www.capgemini.com/careers/join-capgemini/"
+
+  - name: "HCLTech"
+    type: generic
+    value: "https://www.hcltech.com/careers"
+
+  - name: "Tech Mahindra"
+    type: generic
+    value: "https://careers.techmahindra.com/"
