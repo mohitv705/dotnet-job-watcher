@@ -1,6 +1,17 @@
-from providers import ashby, generic, greenhouse, icims, lever, smartrecruiters, successfactors, workday
+from providers import (
+    accenture,
+    ashby,
+    generic,
+    greenhouse,
+    icims,
+    lever,
+    smartrecruiters,
+    successfactors,
+    workday,
+)
 
 PROVIDERS = {
+    "accenture": accenture.fetch,
     "ashby": ashby.fetch,
     "generic": generic.fetch,
     "greenhouse": greenhouse.fetch,

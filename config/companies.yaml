@@ -52,7 +52,7 @@ companies:
 
   - name: Accenture
     tier: 1
-    type: generic
+    type: accenture
     value: "https://www.accenture.com/in-en/careers"
     filters:
       locations: []
