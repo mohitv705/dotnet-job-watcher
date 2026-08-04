@@ -1,112 +1,112 @@
-# Add your target companies here.
-#
-# type: greenhouse        -> value is the Greenhouse "board token"
-#                            (boards.greenhouse.io/<TOKEN>)
-# type: lever             -> value is the Lever company slug
-#                            (jobs.lever.co/<SLUG>)
-# type: workday           -> value is a mapping: tenant, wd_host, site
-#                            (from <tenant>.<wd_host>.myworkdayjobs.com/<site>)
-# type: smartrecruiters   -> value is the SmartRecruiters company identifier
-#                            (jobs.smartrecruiters.com/<IDENTIFIER>)
-# type: ashby             -> value is the Ashby job board name
-#                            (jobs.ashbyhq.com/<NAME>)
-# type: icims             -> value is the careers/search page URL (best-effort —
-#                            see providers/icims.py, no standard public API exists)
-# type: successfactors    -> value is the careers/search page URL (best-effort —
-#                            see providers/successfactors.py, same caveat as icims)
-# type: generic           -> value is the full careers page URL (works on
-#                            plain server-rendered HTML only — check if the
-#                            company uses one of the ATS platforms above first,
-#                            those are far more reliable)
+companies:
 
-# Global filters, applied to every company UNLESS that company defines its
-# own "filters:" block (which fully replaces this one for that company).
+  - name: Groww
+    type: greenhouse
+    value: groww
+    filters:
+      locations: ["Bangalore", "Bengaluru", "Gurugram", "Mumbai", "Pune", "Remote", "India"]
+
+  - name: PhonePe
+    type: greenhouse
+    value: phonepe
+    filters:
+      locations: ["Bangalore", "Bengaluru", "Pune", "Mumbai", "Hyderabad", "Remote", "India"]
+
+  - name: Payoneer
+    type: greenhouse
+    value: payoneer
+    filters:
+      locations: ["Bangalore", "Bengaluru", "Chennai", "Hyderabad", "Mumbai", "Pune", "Remote", "India"]
+
+  - name: Infosys
+    type: custom
+    value: infosys
+    filters:
+      locations: []
+
+  - name: Cognizant
+    type: custom
+    value: cognizant
+    filters:
+      locations: []
+
+  - name: Capgemini
+    type: custom
+    value: capgemini
+    filters:
+      locations: []
+
+  - name: Wipro
+    type: custom
+    value: wipro
+    filters:
+      locations: []
+
+  - name: Tech Mahindra
+    type: custom
+    value: techmahindra
+    filters:
+      locations: []
+
+  - name: Accenture
+    type: custom
+    value: accenture
+    filters:
+      locations: []
+
+  - name: Atlassian
+    type: greenhouse
+    value: atlassian
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Remote"]
+
+  - name: Zepto
+    type: ashby
+    value: zepto
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+
+  - name: Cred
+    type: greenhouse
+    value: cred
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+
+  - name: Swiggy
+    type: lever
+    value: swiggy
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Gurugram", "Mumbai", "Remote"]
+
+  - name: Postman
+    type: lever
+    value: postman
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Remote"]
+
+  - name: TCS
+    type: custom
+    value: tcs
+    filters:
+      locations: []
+
+  - name: Razorpay
+    type: lever
+    value: razorpay
+    filters:
+      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+
+  - name: HCLTech
+    type: custom
+    value: hcltech
+    filters:
+      locations: []
+
+
 filters:
   remote_only: false
-  locations: ["Kolkata", "Bangalore", "Bengaluru", "Hyderabad", "Pune", "Gurugram", "Remote", "India"]
-  keywords_include: []       # ALL must appear in title/description (e.g. [".NET", "C#"])
-  keywords_exclude: ["Senior", "Lead", "Staff", "Principal", "Manager", "Intern"]
-  experience_levels: []      # any-of match, e.g. ["0-2 years", "mid level"]
+  locations: []
+  keywords_include: []
+  keywords_exclude: ["Staff", "Principal", "Manager", "Intern"]
+  experience_levels: []
 
-companies:
-  # ---- High-Yield ATS Targets (Greenhouse, Lever, Workday, Ashby) ---------
-
-  - name: "PhonePe"
-    type: greenhouse
-    value: "phonepe"
-
-  - name: "Payoneer"
-    type: greenhouse
-    value: "payoneer"
-
-  - name: "Groww"
-    type: greenhouse
-    value: "groww"
-
-  - name: "Cred"
-    type: greenhouse
-    value: "cred"
-
-  - name: "Atlassian"
-    type: greenhouse
-    value: "atlassian"
-
-  - name: "Razorpay"
-    type: lever
-    value: "razorpay"
-
-  - name: "Swiggy"
-    type: lever
-    value: "swiggy"
-
-  - name: "Postman"
-    type: lever
-    value: "postman"
-
-  - name: "Zepto"
-    type: ashby
-    value: "zepto"
-
-  - name: "Accenture"
-    type: workday
-    value:
-      tenant: "accenture"
-      wd_host: "wd103"
-      site: "AccentureCareers"
-
-  # ---- Service-based companies: NOT on standard API providers -------------
-  # TCS, Wipro, Infosys, Cognizant, Capgemini, HCLTech, and Tech Mahindra do
-  # NOT run on Greenhouse/Lever/Workday/SmartRecruiters/Ashby. They use
-  # heavy custom/JS-rendered portals (TCS iBegin, BrassRing, Phenom), none
-  # of which plain HTML scrapers cover well.
-  #
-  # Listed below for direct reference, but require dedicated browser automation
-  # (e.g. Playwright) for reliable scraping.
-
-  - name: "TCS"
-    type: generic
-    value: "https://ibegin.tcs.com/iBegin/jobs/search"
-
-  - name: "Wipro"
-    type: generic
-    value: "https://careers.wipro.com/"
-
-  - name: "Infosys"
-    type: generic
-    value: "https://career.infosys.com/"
-
-  - name: "Cognizant"
-    type: generic
-    value: "https://careers.cognizant.com/global-en/jobs/"
-
-  - name: "Capgemini"
-    type: generic
-    value: "https://www.capgemini.com/careers/join-capgemini/"
-
-  - name: "HCLTech"
-    type: generic
-    value: "https://www.hcltech.com/careers"
-
-  - name: "Tech Mahindra"
-    type: generic
-    value: "https://careers.techmahindra.com/"
