@@ -1,57 +1,138 @@
 """
-Post-fetch filtering: location, remote-only, extra required/excluded
-keywords, and experience level. Applied on top of the base .NET/C#/backend
-keyword match in check_jobs.py.
+Job filtering logic.
 
-A company entry in companies.yaml can define its own "filters:" block,
-which fully replaces the global "filters:" block for that company. If a
-company defines no filters block, the global one applies.
+Filtering is deliberately separated into:
+1. keyword matching
+2. location matching
+3. excluded keyword matching
+
+This makes it possible for the watcher to report exactly where a job
+was filtered out.
 """
 
-from dataclasses import dataclass, field
-from typing import List
+from __future__ import annotations
 
-from providers.base import Job
+import re
+from typing import Iterable
 
 
-@dataclass
 class JobFilter:
-    locations: List[str] = field(default_factory=list)         # match ANY (substring, case-insensitive)
-    remote_only: bool = False
-    keywords_include: List[str] = field(default_factory=list)  # ALL must appear in title/description
-    keywords_exclude: List[str] = field(default_factory=list)  # job dropped if ANY appear
-    experience_levels: List[str] = field(default_factory=list) # match ANY (substring, case-insensitive)
+    def __init__(
+        self,
+        keywords: Iterable[str],
+        locations: Iterable[str] | None = None,
+        excluded_keywords: Iterable[str] | None = None,
+    ) -> None:
+        self.keywords = [
+            str(keyword).strip()
+            for keyword in keywords
+            if str(keyword).strip()
+        ]
 
-    def matches(self, job: Job) -> bool:
-        haystack = f"{job.title}\n{job.description}\n{job.location}".lower()
+        self.locations = [
+            str(location).strip()
+            for location in (locations or [])
+            if str(location).strip()
+        ]
 
-        if self.locations and not any(loc.lower() in job.location.lower() for loc in self.locations):
+        self.excluded_keywords = [
+            str(keyword).strip()
+            for keyword in (excluded_keywords or [])
+            if str(keyword).strip()
+        ]
+
+    @staticmethod
+    def _job_text(job) -> str:
+        """
+        Build the searchable text from all useful job fields.
+        """
+        values = [
+            getattr(job, "title", ""),
+            getattr(job, "description", ""),
+            getattr(job, "location", ""),
+            getattr(job, "employment_type", ""),
+        ]
+
+        return "\n".join(
+            str(value)
+            for value in values
+            if value
+        ).lower()
+
+    @staticmethod
+    def _contains_keyword(text: str, keyword: str) -> bool:
+        """
+        Perform a case-insensitive keyword search.
+
+        For normal phrases, substring matching is useful because career
+        sites often use punctuation or formatting inconsistently.
+        """
+        return keyword.lower() in text
+
+    def matches_keywords(self, job) -> bool:
+        """
+        Return True when at least one configured keyword occurs in the job.
+        """
+        text = self._job_text(job)
+
+        if not self.keywords:
+            return True
+
+        return any(
+            self._contains_keyword(text, keyword)
+            for keyword in self.keywords
+        )
+
+    def matches_location(self, job) -> bool:
+        """
+        Return True when the job passes the location filter.
+
+        If no locations are configured, every location passes.
+
+        If a job has no location and locations are configured, it is
+        currently rejected. The diagnostic output in check_jobs.py lets
+        us identify whether this is happening frequently.
+        """
+        if not self.locations:
+            return True
+
+        location = str(
+            getattr(job, "location", "") or ""
+        ).lower()
+
+        if not location:
             return False
 
-        if self.remote_only:
-            is_remote = job.remote if job.remote is not None else ("remote" in job.location.lower())
-            if not is_remote:
-                return False
+        return any(
+            configured_location.lower() in location
+            for configured_location in self.locations
+        )
 
-        if self.keywords_include and not all(kw.lower() in haystack for kw in self.keywords_include):
+    def matches_exclusions(self, job) -> bool:
+        """
+        Return True when the job does NOT contain an excluded keyword.
+        """
+        if not self.excluded_keywords:
+            return True
+
+        text = self._job_text(job)
+
+        return not any(
+            self._contains_keyword(text, keyword)
+            for keyword in self.excluded_keywords
+        )
+
+    def matches(self, job) -> bool:
+        """
+        Apply the complete filter pipeline.
+        """
+        if not self.matches_keywords(job):
             return False
 
-        if self.keywords_exclude and any(kw.lower() in haystack for kw in self.keywords_exclude):
+        if not self.matches_location(job):
             return False
 
-        if self.experience_levels and not any(lvl.lower() in haystack for lvl in self.experience_levels):
+        if not self.matches_exclusions(job):
             return False
 
         return True
-
-
-def filter_from_config(cfg: dict) -> JobFilter:
-    if not cfg:
-        return JobFilter()
-    return JobFilter(
-        locations=cfg.get("locations") or [],
-        remote_only=bool(cfg.get("remote_only", False)),
-        keywords_include=cfg.get("keywords_include") or [],
-        keywords_exclude=cfg.get("keywords_exclude") or [],
-        experience_levels=cfg.get("experience_levels") or [],
-    )
