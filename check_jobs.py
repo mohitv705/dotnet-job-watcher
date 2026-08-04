@@ -1,317 +1,312 @@
 
 #!/usr/bin/env python3
 
-from pathlib import Path
-import concurrent.futures
+"""
+dotnet-job-watcher
+-------------------
+Checks a list of target companies' job boards for postings matching
+.NET/C#/backend keywords (plus optional location/remote/experience
+filters), and notifies (Telegram and/or email) about postings that
+weren't seen on the previous run.
+
+Run manually:
+
+    python check_jobs.py
+
+Designed to be run daily via GitHub Actions.
+"""
+
+import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
 import yaml
 
 from filters import filter_from_config
 from keywords import matches_keywords
 from notifications import notify_all
-from providers import get_provider
-from state import load_state, save_state
+from providers import PROVIDERS
 
 
 CONFIG_PATH = Path(__file__).parent / "config" / "companies.yaml"
+STATE_PATH = Path(__file__).parent / "state.json"
+
+MAX_WORKERS = 10
 
 
-def fetch_company(company):
-    """
-    Fetch jobs for one company.
+def fetch_company_jobs(company: dict):
+    """Runs in a worker thread: fetch + tag every job with the display name."""
 
-    Returns:
-        company_name, jobs, error
-    """
     name = company["name"]
+    ctype = company["type"]
+    value = company["value"]
 
-    try:
-        provider = get_provider(company)
-        jobs = list(provider.fetch_jobs())
+    fetcher = PROVIDERS.get(ctype)
 
-        return name, jobs, None
+    if not fetcher:
+        raise ValueError(f"Unknown provider type '{ctype}'")
 
-    except Exception as exc:
-        return name, [], exc
+    jobs = fetcher(value)
+
+    for job in jobs:
+        # Providers may set company to a slug/token.
+        # Replace it with the friendly display name from companies.yaml.
+        job.company = name
+
+    return jobs
+
+
+def load_state() -> dict:
+    if STATE_PATH.exists():
+        return json.loads(STATE_PATH.read_text())
+
+    return {}
+
+
+def save_state(state: dict) -> None:
+    STATE_PATH.write_text(
+        json.dumps(state, indent=2, sort_keys=True)
+    )
 
 
 def main():
-    config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
+
+    if not CONFIG_PATH.exists():
+        print(
+            f"Missing config file: {CONFIG_PATH}",
+            file=sys.stderr
+        )
+        sys.exit(1)
+
+    config = yaml.safe_load(
+        CONFIG_PATH.read_text()
+    )
 
     companies = config.get("companies", [])
-    global_filter = filter_from_config(config.get("filters", {}))
+
+    global_filter = filter_from_config(
+        config.get("filters")
+    )
 
     state = load_state()
 
+    new_state = {}
+    new_jobs_by_company = {}
+
+    # Diagnostic counters
+    total_fetched = 0
+    total_keyword_matches = 0
+    total_filter_matches = 0
+    total_new = 0
+    failed_companies = 0
+
     print("=" * 70)
-    print(".NET JOB WATCHER")
+    print("DOTNET JOB WATCHER")
     print("=" * 70)
     print(f"Companies configured: {len(companies)}")
     print("=" * 70)
 
-    all_new_jobs = []
+    with ThreadPoolExecutor(
+        max_workers=MAX_WORKERS
+    ) as pool:
 
-    successful_companies = 0
-    failed_companies = 0
-
-    total_fetched = 0
-    total_keyword_matches = 0
-    total_filter_matches = 0
-    total_new_jobs = 0
-
-    results = []
-
-    with concurrent.futures.ThreadPoolExecutor(
-        max_workers=min(10, max(1, len(companies)))
-    ) as executor:
-
-        futures = {
-            executor.submit(fetch_company, company): company
+        future_to_company = {
+            pool.submit(fetch_company_jobs, company): company
             for company in companies
         }
 
-        for future in concurrent.futures.as_completed(futures):
-            company = futures[future]
+        for future in as_completed(future_to_company):
+
+            company = future_to_company[future]
+            name = company["name"]
 
             try:
-                name, jobs, error = future.result()
+                jobs = future.result()
 
             except Exception as exc:
-                name = company["name"]
-                jobs = []
-                error = exc
 
-            # ---------------------------------------------------------
-            # PROVIDER FAILURE
-            # ---------------------------------------------------------
-            if error is not None:
                 failed_companies += 1
 
                 print()
                 print(f"✗ {name}")
-                print(f"  Provider error: {type(error).__name__}: {error}")
-
-                results.append(
-                    {
-                        "name": name,
-                        "success": False,
-                        "fetched": 0,
-                        "keyword_matches": 0,
-                        "filter_matches": 0,
-                        "new_jobs": 0,
-                    }
+                print(
+                    f"  Failed to fetch: "
+                    f"{type(exc).__name__}: {exc}"
                 )
 
-                # Preserve existing state for a failed provider.
-                state.setdefault(name, [])
+                # Keep previous state if provider fails.
+                new_state[name] = state.get(name, [])
 
                 continue
-
-            successful_companies += 1
 
             fetched_count = len(jobs)
             total_fetched += fetched_count
 
+            company_filter = (
+                filter_from_config(company["filters"])
+                if company.get("filters")
+                else global_filter
+            )
+
             # ---------------------------------------------------------
             # KEYWORD MATCHING
             # ---------------------------------------------------------
-            keyword_matches = [
+
+            keyword_matched_jobs = [
                 job
                 for job in jobs
-                if matches_keywords(job)
+                if matches_keywords(
+                    f"{job.title}\n{job.description}"
+                )
             ]
 
-            keyword_match_count = len(keyword_matches)
+            keyword_match_count = len(
+                keyword_matched_jobs
+            )
+
             total_keyword_matches += keyword_match_count
 
             # ---------------------------------------------------------
-            # CONFIGURED FILTER
+            # FILTER MATCHING
             # ---------------------------------------------------------
-            filtered_jobs = [
+
+            matched_jobs = [
                 job
-                for job in keyword_matches
-                if global_filter.matches(job)
+                for job in keyword_matched_jobs
+                if company_filter.matches(job)
             ]
 
-            filter_match_count = len(filtered_jobs)
+            filter_match_count = len(
+                matched_jobs
+            )
+
             total_filter_matches += filter_match_count
 
             # ---------------------------------------------------------
-            # STATE / NEW JOBS
+            # STATE / NEW JOB DETECTION
             # ---------------------------------------------------------
-            previous_urls = set(state.get(name, []))
+
+            previous_urls = set(
+                state.get(name, [])
+            )
+
+            current_urls = {
+                job.url
+                for job in matched_jobs
+            }
+
+            new_urls = (
+                current_urls - previous_urls
+            )
 
             new_jobs = [
                 job
-                for job in filtered_jobs
-                if job.url not in previous_urls
+                for job in matched_jobs
+                if job.url in new_urls
             ]
 
-            new_job_count = len(new_jobs)
-            total_new_jobs += new_job_count
+            new_count = len(new_jobs)
 
-            all_new_jobs.extend(new_jobs)
+            total_new += new_count
 
-            # Update state only after successful provider execution.
-            state[name] = sorted(
-                previous_urls | {job.url for job in filtered_jobs}
+            if new_jobs:
+                new_jobs_by_company[name] = new_jobs
+
+            new_state[name] = sorted(
+                current_urls
             )
 
             # ---------------------------------------------------------
             # DIAGNOSTICS
             # ---------------------------------------------------------
+
             print()
             print(f"✓ {name}")
             print(f"  Jobs fetched       : {fetched_count}")
             print(f"  Keyword matches    : {keyword_match_count}")
             print(f"  Filter matches     : {filter_match_count}")
-            print(f"  New matches        : {new_job_count}")
+            print(f"  Previously seen     : {len(previous_urls)}")
+            print(f"  New matches        : {new_count}")
 
             if fetched_count == 0:
-                print("  ⚠ WARNING: provider returned zero jobs")
+                print(
+                    "  ⚠ Provider returned zero jobs."
+                )
 
             elif keyword_match_count == 0:
-                print("  ⚠ WARNING: no jobs matched the configured keywords")
+                print(
+                    "  ⚠ No jobs matched the configured keywords."
+                )
 
             elif filter_match_count == 0:
-                print("  ⚠ WARNING: keyword matches were removed by filters")
+                print(
+                    "  ⚠ Keyword matches were removed by filters."
+                )
 
-            results.append(
-                {
-                    "name": name,
-                    "success": True,
-                    "fetched": fetched_count,
-                    "keyword_matches": keyword_match_count,
-                    "filter_matches": filter_match_count,
-                    "new_jobs": new_job_count,
-                }
-            )
+    # -----------------------------------------------------------------
+    # SAVE STATE
+    # -----------------------------------------------------------------
 
-    # Save state after all providers have completed.
-    save_state(state)
+    save_state(new_state)
 
-    # -------------------------------------------------------------
+    # -----------------------------------------------------------------
     # SUMMARY
-    # -------------------------------------------------------------
+    # -----------------------------------------------------------------
+
     print()
     print("=" * 70)
     print("RUN SUMMARY")
     print("=" * 70)
 
-    print(f"Companies configured : {len(companies)}")
-    print(f"Successful providers : {successful_companies}")
-    print(f"Failed providers     : {failed_companies}")
-    print(f"Jobs fetched         : {total_fetched}")
-    print(f"Keyword matches      : {total_keyword_matches}")
-    print(f"Filter matches       : {total_filter_matches}")
-    print(f"New jobs             : {total_new_jobs}")
+    print(
+        f"Companies configured : {len(companies)}"
+    )
 
-    # -------------------------------------------------------------
-    # FAILED PROVIDERS
-    # -------------------------------------------------------------
-    failed = [
-        result
-        for result in results
-        if not result["success"]
-    ]
+    print(
+        f"Companies failed     : {failed_companies}"
+    )
 
-    if failed:
-        print()
-        print("FAILED PROVIDERS")
-        print("-" * 70)
+    print(
+        f"Jobs fetched         : {total_fetched}"
+    )
 
-        for result in failed:
-            print(f"- {result['name']}")
+    print(
+        f"Keyword matches      : {total_keyword_matches}"
+    )
 
-    # -------------------------------------------------------------
-    # ZERO JOB PROVIDERS
-    # -------------------------------------------------------------
-    zero_jobs = [
-        result
-        for result in results
-        if result["success"] and result["fetched"] == 0
-    ]
+    print(
+        f"Filter matches       : {total_filter_matches}"
+    )
 
-    if zero_jobs:
-        print()
-        print("PROVIDERS RETURNING ZERO JOBS")
-        print("-" * 70)
-
-        for result in zero_jobs:
-            print(f"- {result['name']}")
-
-    # -------------------------------------------------------------
-    # KEYWORD FAILURE
-    # -------------------------------------------------------------
-    no_keywords = [
-        result
-        for result in results
-        if (
-            result["success"]
-            and result["fetched"] > 0
-            and result["keyword_matches"] == 0
-        )
-    ]
-
-    if no_keywords:
-        print()
-        print("COMPANIES WITH NO KEYWORD MATCHES")
-        print("-" * 70)
-
-        for result in no_keywords:
-            print(f"- {result['name']}")
-
-    # -------------------------------------------------------------
-    # FILTER FAILURE
-    # -------------------------------------------------------------
-    removed_by_filter = [
-        result
-        for result in results
-        if (
-            result["success"]
-            and result["keyword_matches"] > 0
-            and result["filter_matches"] == 0
-        )
-    ]
-
-    if removed_by_filter:
-        print()
-        print("COMPANIES WHERE FILTERS REMOVED ALL MATCHES")
-        print("-" * 70)
-
-        for result in removed_by_filter:
-            print(
-                f"- {result['name']} "
-                f"({result['keyword_matches']} keyword matches)"
-            )
+    print(
+        f"New matches          : {total_new}"
+    )
 
     print("=" * 70)
 
-    # -------------------------------------------------------------
+    # -----------------------------------------------------------------
     # NOTIFICATIONS
-    # -------------------------------------------------------------
-    if all_new_jobs:
-        try:
-            notify_all(all_new_jobs)
-            print(
-                f"Notification sent for "
-                f"{len(all_new_jobs)} new job(s)."
-            )
+    # -----------------------------------------------------------------
 
-        except Exception as exc:
-            print(
-                f"Notification failed: "
-                f"{type(exc).__name__}: {exc}",
-                file=sys.stderr,
-            )
-            return 1
+    if new_jobs_by_company:
+
+        print(
+            f"Sending notifications for "
+            f"{total_new} new job(s)..."
+        )
+
+        notify_all(
+            new_jobs_by_company
+        )
 
     else:
-        print("No new matching jobs found.")
 
-    return 0
+        print(
+            "No new matching jobs found."
+        )
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
 
