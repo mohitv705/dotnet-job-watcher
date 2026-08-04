@@ -1,16 +1,20 @@
 """
-Base keyword match applied to every job's title+description before any
-location/remote/include-exclude filters in filters.py run. Edit
-KEYWORD_PATTERN to widen or narrow what counts as a ".NET/C#/backend" role.
+Keywords used to identify C#/.NET/backend roles.
 """
 
-import re
-
-KEYWORD_PATTERN = re.compile(
-    r"(\.net|dot\s?net|c#|c-sharp|csharp|asp\.net|backend|back-end|back\send)",
-    re.IGNORECASE,
-)
-
-
-def matches_keywords(text: str) -> bool:
-    return bool(KEYWORD_PATTERN.search(text or ""))
+KEYWORDS = [
+    ".NET",
+    ".NET Core",
+    "dotnet",
+    "C#",
+    "CSharp",
+    "C-Sharp",
+    "ASP.NET",
+    "ASP.NET Core",
+    "Web API",
+    "Entity Framework",
+    "EF Core",
+    "backend",
+    "back-end",
+    "back end",
+]
