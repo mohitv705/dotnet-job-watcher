@@ -1,112 +1,222 @@
+# ============================================================
+# DOTNET JOB WATCHER - COMPANY CONFIGURATION
+#
+# Tier 1 = realistic / high-priority targets
+# Tier 2 = good targets / somewhat more competitive
+# Tier 3 = stretch targets
+#
+# Experience is NOT used as a hard filter.
+# It is extracted from the job description and shown in Telegram.
+# ============================================================
+
 companies:
 
-  - name: Groww
-    type: greenhouse
-    value: groww
-    filters:
-      locations: ["Bangalore", "Bengaluru", "Gurugram", "Mumbai", "Pune", "Remote", "India"]
-
-  - name: PhonePe
-    type: greenhouse
-    value: phonepe
-    filters:
-      locations: ["Bangalore", "Bengaluru", "Pune", "Mumbai", "Hyderabad", "Remote", "India"]
-
-  - name: Payoneer
-    type: greenhouse
-    value: payoneer
-    filters:
-      locations: ["Bangalore", "Bengaluru", "Chennai", "Hyderabad", "Mumbai", "Pune", "Remote", "India"]
+  # ============================================================
+  # TIER 1 — REALISTIC / HIGH PRIORITY
+  # ============================================================
 
   - name: Infosys
-    type: custom
-    value: infosys
+    tier: 1
+    type: generic
+    value: "https://career.infosys.com/"
     filters:
       locations: []
 
   - name: Cognizant
-    type: custom
-    value: cognizant
+    tier: 1
+    type: generic
+    value: "https://careers.cognizant.com/global/en"
     filters:
       locations: []
 
   - name: Capgemini
-    type: custom
-    value: capgemini
+    tier: 1
+    type: generic
+    value: "https://www.capgemini.com/careers/"
     filters:
       locations: []
 
   - name: Wipro
-    type: custom
-    value: wipro
+    tier: 1
+    type: generic
+    value: "https://careers.wipro.com/"
     filters:
       locations: []
 
   - name: Tech Mahindra
-    type: custom
-    value: techmahindra
+    tier: 1
+    type: generic
+    value: "https://careers.techmahindra.com/"
     filters:
       locations: []
 
   - name: Accenture
-    type: custom
-    value: accenture
+    tier: 1
+    type: generic
+    value: "https://www.accenture.com/in-en/careers"
     filters:
       locations: []
 
+  - name: TCS
+    tier: 1
+    type: generic
+    value: "https://www.tcs.com/careers"
+    filters:
+      locations: []
+
+  - name: HCLTech
+    tier: 1
+    type: generic
+    value: "https://www.hcltech.com/careers"
+    filters:
+      locations: []
+
+
+  # ============================================================
+  # TIER 2 — GOOD TARGETS
+  # ============================================================
+
+  - name: Groww
+    tier: 2
+    type: greenhouse
+    value: groww
+    filters:
+      locations:
+        - Bangalore
+        - Bengaluru
+        - Gurugram
+        - Mumbai
+        - Pune
+        - Remote
+        - India
+
+  - name: Payoneer
+    tier: 2
+    type: greenhouse
+    value: payoneer
+    filters:
+      locations:
+        - Bangalore
+        - Bengaluru
+        - Chennai
+        - Hyderabad
+        - Mumbai
+        - Pune
+        - Remote
+        - India
+
+
+  # ============================================================
+  # TIER 3 — STRETCH TARGETS
+  # ============================================================
+
+  - name: PhonePe
+    tier: 3
+    type: greenhouse
+    value: phonepe
+    filters:
+      locations:
+        - Bangalore
+        - Bengaluru
+        - Pune
+        - Mumbai
+        - Hyderabad
+        - Remote
+        - India
+
   - name: Atlassian
+    tier: 3
     type: greenhouse
     value: atlassian
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Remote"]
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Remote
 
   - name: Zepto
+    tier: 3
     type: ashby
     value: zepto
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Mumbai
+        - Remote
 
-  - name: Cred
+  - name: CRED
+    tier: 3
     type: greenhouse
     value: cred
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Mumbai
+        - Remote
 
   - name: Swiggy
+    tier: 3
     type: lever
     value: swiggy
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Gurugram", "Mumbai", "Remote"]
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Gurugram
+        - Mumbai
+        - Remote
 
   - name: Postman
+    tier: 3
     type: lever
     value: postman
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Remote"]
-
-  - name: TCS
-    type: custom
-    value: tcs
-    filters:
-      locations: []
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Remote
 
   - name: Razorpay
+    tier: 3
     type: lever
     value: razorpay
     filters:
-      locations: ["India", "Bangalore", "Bengaluru", "Mumbai", "Remote"]
+      locations:
+        - India
+        - Bangalore
+        - Bengaluru
+        - Mumbai
+        - Remote
 
-  - name: HCLTech
-    type: custom
-    value: hcltech
-    filters:
-      locations: []
 
+# ============================================================
+# GLOBAL FILTERS
+# ============================================================
 
 filters:
   remote_only: false
+
   locations: []
+
   keywords_include: []
-  keywords_exclude: ["Staff", "Principal", "Manager", "Intern"]
+
+  # Keep these out because they are generally above your
+  # current ~3-year experience target.
+  keywords_exclude:
+    - Staff
+    - Principal
+    - Manager
+    - Intern
+
+  # Experience is intentionally NOT hard-filtered.
+  # The watcher extracts it and displays the match level
+  # in Telegram instead.
   experience_levels: []
 

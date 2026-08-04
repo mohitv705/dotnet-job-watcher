@@ -16,3 +16,4 @@ class Job:
     posted_at: str = ""
     remote: Optional[bool] = None
     employment_type: str = ""
+    experience: str = ""
