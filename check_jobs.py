@@ -8,7 +8,7 @@ import yaml
 
 from filters import filter_from_config
 from keywords import matches_keywords
-from notifier import notify_all
+from notifications import notify_all
 from providers import get_provider
 from state import load_state, save_state
 
