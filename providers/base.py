@@ -1,35 +1,18 @@
 """
-Common job model and provider interface.
+Shared Job record used by every provider.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Iterable, Protocol
+from typing import Optional
 
 
 @dataclass
 class Job:
     title: str
     url: str
-    company: str
+    company: str = ""
     location: str = ""
     description: str = ""
-    posted_at: datetime | None = None
-    remote: bool = False
+    posted_at: str = ""
+    remote: Optional[bool] = None
     employment_type: str = ""
-
-    # Provider-specific identifiers.
-    # These are optional so existing providers continue to work.
-    job_id: str = ""
-    provider: str = ""
-    source: str = ""
-
-
-class JobProvider(Protocol):
-    def fetch_jobs(self) -> Iterable[Job]:
-        """
-        Return jobs available from the configured company source.
-        """
-        ...
